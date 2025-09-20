@@ -1,0 +1,56 @@
+sg = peripheral.find("stargate")
+shouldCancel = false
+
+-- User settings
+isSteadySignal = true
+side = "left"
+-- End of user settings
+
+    function startUpSetting()
+        if sg.getIrisState() == "OPENING" then os.pullEvent("stargate_iris_opened") end
+        if sg.getIrisState() == "CLOSING" then os.pullEvent("stargate_iris_closed") end
+        if isSteadySignal then
+            if sg.getIrisState() == "OPENED" and rs.getAnalogInput(side) > 0 then sg.toggleIris() os.pullEvent("stargate_iris_closed") end
+            if sg.getIrisState() == "CLOSED" and rs.getAnalogInput(side) == 0 then sg.toggleIris() os.pullEvent("stargate_iris_opened") end
+        end
+    end
+            
+    function keyEvents()
+        repeat
+            _, key = os.pullEvent("key")
+            if key == 265 then
+                if sg.getIrisState() == "OPENING" then os.pullEvent("stargate_iris_opened") end
+                if sg.getIrisState() == "CLOSING" then os.pullEvent("stargate_iris_closed") end
+                currentIrisStatus = sg.getIrisState()
+                sg.toggleIris()
+                if currentIrisStatus == "OPENED" then os.pullEvent("stargate_iris_closed") else os.pullEvent("stargate_iris_opened") end
+            end
+            if key == 293 then shouldCancel = true end
+        until shouldCancel == true
+    end
+
+    function switchIrisState()
+        repeat
+            if sg.getIrisState() == "OPENING" then os.pullEvent("stargate_iris_opened") end
+            if sg.getIrisState() == "CLOSING" then os.pullEvent("stargate_iris_closed") end
+            if isSteadySignal then
+                if rs.getAnalogInput(side) > 0 and sg.getIrisState() == "OPENED" then
+                    sg.toggleIris()
+                    os.pullEvent("stargate_iris_closed")
+                end
+                if rs.getAnalogInput(side) == 0 and sg.getIrisState() == "CLOSED" then
+                    sg.toggleIris()
+                    os.pullEvent("stargate_iris_opened")
+                end
+            else
+                currentIrisState = sg.getIrisState()
+                if rs.getAnalogInput(side) > 0 then
+                    sg.toggleIris()
+                    if currentIrisState == "OPENED" then os.pullEvent("stargate_iris_closed") else os.pullEvent("stargate_iris_opened") end
+                end
+            end
+        until shouldCancel == true
+    end
+
+    startUpSetting()
+    parallel.waitForAll(switchIrisState, keyEvents)
